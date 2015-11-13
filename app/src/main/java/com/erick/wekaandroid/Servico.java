@@ -82,7 +82,7 @@ public class Servico extends Service implements SensorEventListener {
         mMagField = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
         registerListener();
-        this.managerWeka = new ManagerWeka(this);
+        this.managerWeka = new ManagerWeka();
     }
 
     @Override

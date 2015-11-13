@@ -1,62 +1,41 @@
 package com.erick.wekaandroid;
 
-import android.app.Activity;
-import android.content.Context;
 import android.util.Log;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-
 import weka.classifiers.Classifier;
-import weka.classifiers.misc.SerializedClassifier;
 import weka.core.Attribute;
-//import weka.core.DenseInstance;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.SparseInstance;
 
+/**
+ * Created by Erick Ribeiro 13/11/2015
+ *
+ * Essa classe tem como objetivo servir como um mecanismo de conversão dos dados dos sensores vindos
+ * do dispositivo, para o formato de Instacias do Weka.
+ */
+
 public class ManagerWeka {
-    private Context context;
-    private File tempFile;
+    /**
+     * Classficar generico que recebe os dados vindo do .model.
+     */
     private Classifier classifier;
-    private WekaWrapper wrapper;
 
-    public ManagerWeka(Context context){
+    /**
+     * Tag para debug
+     */
+    private static final String TAG = "MANAGER WEKA";
 
+    public ManagerWeka(){
         Globals globals = Globals.getInstance();
         classifier = globals.getActiveModel();
     }
 
-    public ManagerWeka(){
-        wrapper = new WekaWrapper();
-    }
-
-    private Instances dataSet;
-
-    private void executarClassificador(Instance instanceTest){
-		System.out.println("Inicio");
-
-        double pred = 0;
-        try {
-            pred = classifier.classifyInstance(instanceTest);
-            //pred = this.wrapper.classifyInstance(instanceTest);
-            //System.out.print(instanceTest.toString(instanceTest.classIndex()) + " - ");
-            System.out.print(instanceTest.classAttribute().value((int) pred) + " - ");
-
-            System.out.println("Fim");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-	}
-
+    /**
+     * Método responsável por classificar uma instancia no formato de um array de Strings.
+     * @param dados
+     */
     public void classificar(String[] dados){
 
         double[] sensores = new double[15];
@@ -64,12 +43,34 @@ public class ManagerWeka {
             sensores[i] = Double.valueOf(dados[i]);
         }
         Instance instance = inserirInstaciaWeka(sensores);
-        //Log.d("Instance", instance.toString());
         executarClassificador(instance);
     }
 
-    private FastVector getAccInstanceAttributes() {
-        // Declare the numeric attributes
+    /**
+     * Método responsável por executar o classicador, dado uma instancia formata.
+     * @param instance
+     */
+    private void executarClassificador(Instance instance){
+        //Log.d(TAG, "Início da classificação da instancia");
+        double pred;
+
+        try {
+            pred = classifier.classifyInstance(instance);
+            Log.d(TAG,"Rotulo: "+instance.classAttribute().value((int) pred));
+            //Log.d(TAG, "Encerramento da classificação da instancia.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+	}
+
+    /**
+     * Método responsável por criar definir o formato padrao de um instancia, definindo a quantidade
+     * de atribução e o rotulo disponíveis.
+     *
+     * @return
+     */
+    private FastVector getFormatDefaultInstanceAttribute() {
+        // Declara os atributos da instancia
         Attribute accelx = new Attribute("Accel_x");
         Attribute accely = new Attribute("Accel_y");
         Attribute accelz = new Attribute("Accel_z");
@@ -90,7 +91,7 @@ public class ManagerWeka {
         Attribute Rotation_y = new Attribute("Rotation_y");
         Attribute Rotation_z = new Attribute("Rotation_z");
 
-        // Declare the class attribute along with its values
+        // Declara os rótulos dispóniveis para uma instacia a ser classificada.
         FastVector fvClassVal = new FastVector(2);
         fvClassVal.addElement("andando");
         fvClassVal.addElement("parado");
@@ -99,7 +100,7 @@ public class ManagerWeka {
         fvClassVal.addElement("Crise Epileptica");
         Attribute classAttribute = new Attribute("Label", fvClassVal);
 
-        // Declare the feature vector
+        // Define o formato, unindo os atributos e rotulos.
         FastVector fvWekaAttributes = new FastVector(16);
 
         fvWekaAttributes.addElement(accelx);
@@ -127,11 +128,16 @@ public class ManagerWeka {
         return fvWekaAttributes;
     }
 
-
+    /**
+     * Método responsável por converter um array de dados, contendo os valores dos sensores lidos,
+     * e converte-los para uma instancia, no formato que foi definido no getFormatDefaultInstanceAttribute.
+     * @param dados
+     * @return
+     */
     private Instance inserirInstaciaWeka(double[] dados){
 
-        FastVector instanceAttributes = getAccInstanceAttributes();
-        dataSet = new Instances("AccWindowInstance", instanceAttributes, 0);
+        FastVector instanceAttributes = getFormatDefaultInstanceAttribute();
+        Instances dataSet = new Instances("AccWindowInstance", instanceAttributes, 0);
         dataSet.setClassIndex(15);
 
         Instance single_window = new SparseInstance(dataSet.numAttributes());

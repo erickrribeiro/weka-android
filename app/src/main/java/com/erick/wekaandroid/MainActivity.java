@@ -16,24 +16,20 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
-import android.widget.Spinner;
 import android.widget.Toast;
 
 import java.io.File;
 
 import weka.classifiers.Classifier;
+import wekatools.WekaHelper;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener,
-        WekaHelper.WekaHelperListerner{
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, WekaHelper.WekaHelperListerner{
+
     private static final String TAG = "MainActivity:";
-    public static String nomeArquivo;
-    public static String rotulo;
-
     private ImageView buttonIniciaServico;
     private ImageView buttonParaServico;
 
     private static final String WEKA_DIRECTORY = "GripNavigation_Weka";
-    private static String fileName = "";
     private static String modelName = "";
     private WekaHelper wekaHelper = null;
     Globals globalInstance = Globals.getInstance();
@@ -91,17 +87,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
     @Override
     public void onClick(View view) {
-        SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor;
-
         switch (view.getId()){
             case R.id.play:
-                editor = sharedPreferences.edit();
-                editor.putBoolean("prefAtivo", true);
-                editor.commit();
-
                 Intent intent = new Intent(this, Servico.class);
-                intent.putExtra("ValorLabel","Nda");
 
                 Toast.makeText(getApplicationContext(), "SERVIÇO INICIADO", Toast.LENGTH_LONG).show();
 
@@ -116,89 +104,56 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.stopService:
                 stopService(new Intent(this, Servico.class));
-
-                editor = sharedPreferences.edit();
-                editor.putBoolean("prefAtivo", false);
-                editor.commit();
-
                 Log.d(TAG, "Serviço finalizado.");
 
                 updateUI(false);
                 break;
-
         }
-
-
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_load_model) {
             File outPath = getWekaDirectory(MainActivity.WEKA_DIRECTORY);
-//                    WekaTest.modelName = generateModelNameToSave(WekaTest.fileName);
             MainActivity.modelName = "part.model";
             File dataFile = new File(outPath, MainActivity.modelName);
             Log.d(TAG, "weka model to load: " + dataFile.getAbsolutePath());
             if (wekaHelper == null) {
-                wekaHelper = new WekaHelper(this, dataFile.getAbsolutePath());
+                wekaHelper = new WekaHelper(this);
             }
             if (dataFile.exists()) {
                 wekaHelper.loadModel(dataFile.getAbsolutePath());
-            } else {
+            } else
                 Toast.makeText(this, "Model doesn't exist. ABORT!", Toast.LENGTH_SHORT).show();
-            }
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    private boolean isExternalStorageWritable() {
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            return true;
-        }
-        return false;
     }
 
     private File getWekaDirectory(String dirName) {
         // Get the directory for the public documents directory.
         File file = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOCUMENTS), dirName);
-        //Log.d("Path", file)
+
         if (!file.mkdirs()) {
-            Log.e(TAG, "Directory already exists - not created");
+            Log.e(TAG, "O diretorio Directory already exists - not created");
         }
         return file;
-    }
-
-    @Override
-    public void onWekaModelCrossValidated(String summary) {
-
-    }
-
-    @Override
-    public void onWekaModelSaved() {
-
     }
 
     @Override
     public void onWekaModelLoaded(Classifier model) {
         if (model == null) {
             Log.d(TAG, "ruhroh");
-            Toast.makeText(this, "Error while trying to load the model", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Erro enquanto tentava carregar o modelo. ", Toast.LENGTH_SHORT).show();
         } else {
             globalInstance.setActiveModel(model);
             Log.d(TAG, "retreived model: " + model.toString());
