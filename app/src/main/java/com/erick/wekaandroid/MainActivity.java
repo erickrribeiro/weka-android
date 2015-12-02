@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -32,12 +33,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static final String WEKA_DIRECTORY = "GripNavigation_Weka";
     private static String modelName = "";
     private WekaHelper wekaHelper = null;
+    private EditText editTextAlgoritmo;
     Globals globalInstance = Globals.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        this.editTextAlgoritmo = (EditText) findViewById(R.id.editText);
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -123,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         if (id == R.id.action_load_model) {
             File outPath = getWekaDirectory(MainActivity.WEKA_DIRECTORY);
-            MainActivity.modelName = "part.model";
+            MainActivity.modelName = editTextAlgoritmo.getText().toString();
             File dataFile = new File(outPath, MainActivity.modelName);
             Log.d(TAG, "weka model to load: " + dataFile.getAbsolutePath());
             if (wekaHelper == null) {

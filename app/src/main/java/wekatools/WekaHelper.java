@@ -14,7 +14,7 @@ import weka.classifiers.Classifier;
  * Created by ahmadul.hassan on 2015-03-26.
  * Alterado por Erick Ribeiro 13/11/2015
  *
- * Essa classe tem como objetivo, facilitar co carregamento de um .model, exportado do Weka.
+ * Essa classe tem como objetivo, facilitar o carregamento de um .model, exportado do Weka.
  */
 public class WekaHelper {
     private static final String TAG = "WekaHelper";

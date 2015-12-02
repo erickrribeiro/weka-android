@@ -1,27 +1,16 @@
 package com.erick.wekaandroid;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.media.AudioManager;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.widget.Toast;
 
 import java.io.File;
@@ -38,24 +27,25 @@ public class Servico extends Service implements SensorEventListener {
     private Sensor mRotation;
     private Sensor mStepCounter;
     private Sensor mTemperature;
-    public static final String TAG = null;
-    public static final int SCREEN_OFF_RECEIVER_DELAY = 200;
-    private AlarmManager am;
-    private PendingIntent mAlarmSender;
 
-    private String Accel = "0.0" + "," + "0.0" + "," + "0.0";
-    private String linearAccel = "0.0" + "," + "0.0" + "," + "0.0";
-    private String Gyro = "0.0" + "," + "0.0" + "," + "0.0";
-    private String Orientation = "0.0" + "," + "0.0" + "," + "0.0";
-    private String Rotation = "0.0" + "," + "0.0" + "," + "0.0";
-    private String Proximity = "8.0" ;
+    private String Orientation = "0.5" + "," + "0.5";
 
-    private Ringtone ringtone;
+
+
     private ManagerWeka managerWeka;
 
+    private SensorUtilizado acelerometro;
+    private SensorUtilizado aceleracaoLinear;
+    private SensorUtilizado giroscopio;
+    private SensorUtilizado rotacao;
+    private float Proximity;
 
     @Override
     public void onStart(Intent intent, int startId) {
+        this.acelerometro = new SensorUtilizado();
+        this.aceleracaoLinear = new SensorUtilizado();
+        this.giroscopio = new SensorUtilizado();
+        this.rotacao = new SensorUtilizado();
 
         PowerManager mgr = (PowerManager) getSystemService(Context.POWER_SERVICE);
         PowerManager.WakeLock wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakeLock");
@@ -89,19 +79,22 @@ public class Servico extends Service implements SensorEventListener {
     public void onSensorChanged(SensorEvent event) {
 
         int typeSensor = event.sensor.getType();
-        double x = event.values[0];
-        double y = event.values[1];
-        double z = event.values[2];
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
 
         synchronized (this){
             switch (typeSensor){
                 case Sensor.TYPE_ACCELEROMETER:
-                    Accel = x + ", " + y + ", " + z ;  // Accel
-                    //  escrevendo o arquivo completo com todos os sensores
-                    // "Accel_x, Accel_y, Accel_z, linearAccel_x, linearAccel_y, linearAccel_z, Gyro_x, Gyro_y, Gyro_z, Azimuth, Pitch, Roll, Rotation_x, Rotation_y, Rotation_z, Proximity, timeStamp, Label
-                    String completo = Accel + "," + linearAccel + "," + Gyro + "," + Orientation + "," + Rotation+ "\n";
+                    this.acelerometro.atualizarEixos(x, y, z);
 
-                    //Log.d("Valores", completo);
+                    String completo =   this.acelerometro.getMeMoDes() + ","
+                                  + this.aceleracaoLinear.getMeMoDes() + ","
+                                  + this.giroscopio.getMeMoDes()       + ","
+                                  + Orientation                        + ","
+                                  + this.rotacao.getMeMoDes()          +"\n";
+
+                    Log.d("Valores", completo);
 
                     String array[] = completo.split(",");
                     Log.d("Valores", ""+array.length);
@@ -109,30 +102,31 @@ public class Servico extends Service implements SensorEventListener {
 
                     break;
 
+                case Sensor.TYPE_LINEAR_ACCELERATION:
+                    this.aceleracaoLinear.atualizarEixos(x, y, z);
+                    break;
+
                 case Sensor.TYPE_GYROSCOPE:
-                    Gyro = x + ", " + y + ", " + z;
-                break;
+                    this.giroscopio.atualizarEixos(x, y,z);
+                    break;
 
                 case Sensor.TYPE_MAGNETIC_FIELD:
                     break;
 
                 case Sensor.TYPE_ORIENTATION:
-                    Orientation = x + ", " + y + ", " + z;
+                    Orientation = x + ", " + y;
                     break;
 
                 case Sensor.TYPE_PROXIMITY:
-                    Proximity = x+"";
+                    Proximity = x;
                     break;
 
                 case Sensor.TYPE_GRAVITY:
                     break;
 
-                case Sensor.TYPE_LINEAR_ACCELERATION:
-                    linearAccel = x + ", " + y + ", " + z;
-                    break;
 
                 case Sensor.TYPE_ROTATION_VECTOR:
-                    Rotation = x + ", " + y + ", " + z;
+                    this.rotacao.atualizarEixos(x, y, z);
                     break;
 
                 case Sensor.TYPE_STEP_COUNTER:
@@ -144,33 +138,6 @@ public class Servico extends Service implements SensorEventListener {
             }
         }
     }
-
-    public BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.i(TAG, "onReceive("+intent+")");
-
-
-
-            if (!intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
-                return;
-            }
-
-            Runnable runnable = new Runnable() {
-                public void run() {
-                    Intent intent1 = new Intent(getApplicationContext(),Servico.class);
-                    mAlarmSender = PendingIntent.getService(getApplicationContext(), 0, intent1, 0);
-                    am = (AlarmManager)getSystemService(ALARM_SERVICE);
-                    am.setRepeating(AlarmManager.RTC, 0, 200, mAlarmSender);
-                    Log.i(TAG, "Runnable executing.");
-                  //  unregisterListener();
-                    registerListener();
-                }
-            };
-
-            new Handler().postDelayed(runnable, SCREEN_OFF_RECEIVER_DELAY);
-        }
-    };
 
     public void registerListener() {
 

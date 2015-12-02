@@ -2,6 +2,9 @@ package com.erick.wekaandroid;
 
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
 import weka.core.FastVector;
@@ -17,6 +20,7 @@ import weka.core.SparseInstance;
  */
 
 public class ManagerWeka {
+    public static boolean DEBUG = false;
     /**
      * Classficar generico que recebe os dados vindo do .model.
      */
@@ -38,11 +42,15 @@ public class ManagerWeka {
      */
     public void classificar(String[] dados){
 
-        double[] sensores = new double[15];
+        double[] sensores = new double[dados.length];
         for(int i=0;i < dados.length; i++){
             sensores[i] = Double.valueOf(dados[i]);
         }
         Instance instance = inserirInstaciaWeka(sensores);
+
+        if(DEBUG) {
+            Log.d("INSTANCIA", instance.toString());
+        }
         executarClassificador(instance);
     }
 
@@ -55,7 +63,7 @@ public class ManagerWeka {
         double pred;
 
         try {
-            pred = classifier.classifyInstance(instance);
+            pred = classifier.classifyInstance(instance) ;
             Log.d(TAG,"Rotulo: "+instance.classAttribute().value((int) pred));
             //Log.d(TAG, "Encerramento da classificação da instancia.");
         } catch (Exception e) {
@@ -70,60 +78,44 @@ public class ManagerWeka {
      * @return
      */
     private FastVector getFormatDefaultInstanceAttribute() {
-        // Declara os atributos da instancia
-        Attribute accelx = new Attribute("Accel_x");
-        Attribute accely = new Attribute("Accel_y");
-        Attribute accelz = new Attribute("Accel_z");
+        List<Attribute> atributos = new ArrayList<>();
 
-        Attribute linearAccelx = new Attribute("linearAccelx");
-        Attribute linearAccely = new Attribute("linearAccely");
-        Attribute linearAccelz = new Attribute("linearAccelz");
+        atributos.add(new Attribute("Accel_modulo"));
+        atributos.add(new Attribute("Accel_media"));
+        atributos.add(new Attribute("Accel_desvio_padrao"));
 
-        Attribute Gyro_x = new Attribute("Gyro_x");
-        Attribute Gyro_y = new Attribute("Gyro_y");
-        Attribute Gyro_z = new Attribute("Gyro_z");
+        atributos.add(new Attribute("linear_modulo"));
+        atributos.add(new Attribute("liner_media"));
+        atributos.add(new Attribute("linear_desvio_padrao"));
 
-        Attribute Azimuth = new Attribute("Azimuth");
-        Attribute Pitch = new Attribute("Pitch");
-        Attribute Roll = new Attribute("Roll");
+        atributos.add(new Attribute("Gyro_modulo"));
+        atributos.add(new Attribute("Gyro_media"));
+        atributos.add(new Attribute("Gyro_desvio_padrao"));
 
-        Attribute Rotation_x = new Attribute("Rotation_x");
-        Attribute Rotation_y = new Attribute("Rotation_y");
-        Attribute Rotation_z = new Attribute("Rotation_z");
+        atributos.add(new Attribute("Azimuth"));
+        atributos.add(new Attribute("Pitch"));
+        atributos.add(new Attribute("Rotation_modulo"));
+
+        atributos.add(new Attribute("Rotation_media"));
+        atributos.add(new Attribute("Rotation_desvio_padrao"));
+        //atributos.add(new Attribute("Proximity"));
 
         // Declara os rótulos dispóniveis para uma instacia a ser classificada.
         FastVector fvClassVal = new FastVector(2);
         fvClassVal.addElement("andando");
         fvClassVal.addElement("parado");
         fvClassVal.addElement("sentado");
-        fvClassVal.addElement("Desmaio");
-        fvClassVal.addElement("Crise Epileptica");
-        Attribute classAttribute = new Attribute("Label", fvClassVal);
+        //fvClassVal.addElement("Desmaio");
+        //fvClassVal.addElement("Crise Epileptica");
+
+        atributos.add(new Attribute("Label", fvClassVal));
 
         // Define o formato, unindo os atributos e rotulos.
-        FastVector fvWekaAttributes = new FastVector(16);
+        FastVector fvWekaAttributes = new FastVector(atributos.size()+1);
 
-        fvWekaAttributes.addElement(accelx);
-        fvWekaAttributes.addElement(accely);
-        fvWekaAttributes.addElement(accelz);
-
-        fvWekaAttributes.addElement(linearAccelx);
-        fvWekaAttributes.addElement(linearAccely);
-        fvWekaAttributes.addElement(linearAccelz);
-
-        fvWekaAttributes.addElement(Gyro_x);
-        fvWekaAttributes.addElement(Gyro_y);
-        fvWekaAttributes.addElement(Gyro_z);
-
-        fvWekaAttributes.addElement(Azimuth);
-        fvWekaAttributes.addElement(Pitch);
-        fvWekaAttributes.addElement(Roll);
-
-        fvWekaAttributes.addElement(Rotation_x);
-        fvWekaAttributes.addElement(Rotation_y);
-        fvWekaAttributes.addElement(Rotation_z);
-
-        fvWekaAttributes.addElement(classAttribute);
+        for (Attribute attribute: atributos) {
+            fvWekaAttributes.addElement(attribute);
+        }
 
         return fvWekaAttributes;
     }
@@ -137,8 +129,9 @@ public class ManagerWeka {
     private Instance inserirInstaciaWeka(double[] dados){
 
         FastVector instanceAttributes = getFormatDefaultInstanceAttribute();
+
         Instances dataSet = new Instances("AccWindowInstance", instanceAttributes, 0);
-        dataSet.setClassIndex(15);
+        dataSet.setClassIndex(instanceAttributes.size() - 1); //Pega o indice que estão os rótulos
 
         Instance single_window = new SparseInstance(dataSet.numAttributes());
 
